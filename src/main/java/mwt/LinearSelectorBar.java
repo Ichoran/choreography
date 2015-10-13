@@ -733,10 +733,10 @@ public class LinearSelectorBar extends Box
   }
   void cursorCreator(Toolkit tk)
   {
-    leftBound = CursorTools.makeSafeSensibleCursor( this.getClass().getResource("CursorLeftBound.png") , new Vec2I(2,11) , "Left Bound" );
-    rightBound = CursorTools.makeSafeSensibleCursor( this.getClass().getResource("CursorRightBound.png") , new Vec2I(10,11) , "Right Bound" );
-    moveRange = CursorTools.makeSafeSensibleCursor( this.getClass().getResource("CursorSlideLeftRight.png") , new Vec2I(11,8) , "Move Bounds" );
-    movePoint = CursorTools.makeSafeSensibleCursor( this.getClass().getResource("CursorPointLeftRight.png") , new Vec2I(10,11) , "Move Key Point" );
+    leftBound = CursorTools.makeSafeSensibleCursor( this.getClass().getResource("/CursorLeftBound.png") , new Vec2I(2,11) , "Left Bound" );
+    rightBound = CursorTools.makeSafeSensibleCursor( this.getClass().getResource("/CursorRightBound.png") , new Vec2I(10,11) , "Right Bound" );
+    moveRange = CursorTools.makeSafeSensibleCursor( this.getClass().getResource("/CursorSlideLeftRight.png") , new Vec2I(11,8) , "Move Bounds" );
+    movePoint = CursorTools.makeSafeSensibleCursor( this.getClass().getResource("/CursorPointLeftRight.png") , new Vec2I(10,11) , "Move Key Point" );
   }
   public void setRepaintWaiter(AtomicBoolean ab) { if (slide!=null) slide.paint_waiting = ab; }
   public RangeSpinner getTriSpinner() { return spin; }

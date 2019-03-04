@@ -96,7 +96,7 @@ public class Curvaceous implements CustomComputation {
     Vec2F v = new Vec2F();
     Vec2F w = new Vec2F();
     int n = 0;
-    Dance.Style ds = d.segmentation[n];
+    Style ds = d.segmentation[n];
     for (int i=0; i<bias.length ; i++) {
       if (i>ds.i1 && n<d.segmentation.length) { n++; ds = d.segmentation[n]; }
       if (Float.isNaN(bias[i]) || i<ds.i0 || i>ds.i1 || !d.loc_okay(d.centroid[i])) { u.eq(0,0); continue; }
@@ -114,10 +114,10 @@ public class Curvaceous implements CustomComputation {
         dd.dirx[i] = w.x;
         dd.diry[i] = w.y;
       }
-      if (ds.kind==Dance.Styled.Arc) u.eq((float)ds.fit.circ.params.x0 - d.centroid[i].x,(float)ds.fit.circ.params.y0 - d.centroid[i].y);
+      if (ds.kind==Style.Styled.Arc) u.eq((float)ds.fit.circ.params.x0 - d.centroid[i].x,(float)ds.fit.circ.params.y0 - d.centroid[i].y);
       else u.eq(0,0);
       float sgn = (w.X(u)>0) ? -1.0f : ((w.X(u)<0) ? 1.0f : 0.0f);
-      dd.curve[i] = (ds.kind==Dance.Styled.Arc) ? sgn/(float)ds.fit.circ.params.R : 0;
+      dd.curve[i] = (ds.kind==Style.Styled.Arc) ? sgn/(float)ds.fit.circ.params.R : 0;
       u.eq(v);
     }
     for (int i=0;i<bias.length;i++) {

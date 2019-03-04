@@ -9,5 +9,5 @@ lazy val root: Project = (project in file(".")).
     libraryDependencies += "com.github.ichoran" %% "kse" % "0.6-SNAPSHOT",
     libraryDependencies += "com.novocode" % "junit-interface" % "0.9" % "test",
     libraryDependencies += "com.lihaoyi" %% "fastparse" % "0.4.2",
-    mainClass in (Compile, run) := Some("mwt.MwtWconConvert")
+    mainClass in (Compile, run) := Some("mwt.converter.WconToOld")
   )

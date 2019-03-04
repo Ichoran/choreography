@@ -1,6 +1,6 @@
 /* Choreography.java - Main application file
  * Copyright 2010-2013 Howard Hughes Medical Institute and Rex Kerr
- * Copyright 2015 Calico Life Sciences LLC (authored by Rex Kerr)
+ * Copyright 2015, 2018 Calico Life Sciences LLC (authored by Rex Kerr)
  * This file is a part of Choreography and is distributed under the
  * terms of the GNU Lesser General Public Licence version 2.1 (LGPL 2.1).
  * For details, see http://www.gnu.org/licences
@@ -68,6 +68,7 @@ public class Choreography
   public ArrayList<ComputationInfo> plugininfo;
   PlugMapper plug_map;
   LinkedList<CustomOutputModification> plugmods;
+  LinkedList<CustomSegmentation> plugsegs;
   
   // Areas of the field of view from which to specifically include or exclude data
   public Dance.ReceptiveField attend[];
@@ -1142,7 +1143,7 @@ public class Choreography
         int ev;
         
         if (events==null) events = new LinkedList<Integer>();
-        for (i++ ; i < tokens.length && !tokens[i].startsWith("%") ; i++)
+        for (i++ ; i < tokens.length && !tokens[i].startsWith("%") && !tokens[i].startsWith("@"); i++)
         {
           if (tokens[i].startsWith("0x")) {
             ev = Integer.parseInt( tokens[i].substring(2) , 16 );
@@ -1167,7 +1168,7 @@ public class Choreography
         if (ancestry==null) ancestry = new Ancestry(-1);
         for (i++ ; i+1 < tokens.length ; i+=2)
         {
-          if (tokens[i].equals("%%%")) break;
+          if (tokens[i].equals("%%%") || tokens[i].equals("@")) break;
           ori = Integer.parseInt( tokens[i] );
           fate = Integer.parseInt( tokens[i+1] );
           ancestry.addOriginFate(ori,fate);
@@ -1181,6 +1182,7 @@ public class Choreography
         int fnum;
         long offset;
         for (i++ ; i+1<tokens.length ; i+=2) {
+          if (tokens[i].equals("@")) break;
           id = Integer.parseInt(tokens[i]);
           int j = tokens[i+1].indexOf('.');
           if (j<0) { fnum = Integer.parseInt(tokens[i+1]); offset=0; }
@@ -1642,6 +1644,10 @@ public class Choreography
     plugmods = new LinkedList<CustomOutputModification>();
     for (ComputationInfo ci : plugininfo) {
       if (ci.plugin instanceof CustomOutputModification) plugmods.add((CustomOutputModification)ci.plugin);
+    }
+    plugsegs = new LinkedList<CustomSegmentation>();
+    for (ComputationInfo ci : plugininfo) {
+      if (ci.plugin instanceof CustomSegmentation) plugsegs.add((CustomSegmentation)ci.plugin);
     }
 
     // Check to make sure nicknames are unique
@@ -3021,6 +3027,14 @@ public class Choreography
         computeDataSkipJunk(data,custom[i]);
       }
     }
+  }
+
+  public Style[] recomputeSegmentation(Dance d, Style[] segmentation, double credibleDistSq) {
+    for (CustomSegmentation cs : plugsegs) {
+      Style[] fixed = cs.resegment(d, segmentation, credibleDistSq);
+      if (fixed != null) segmentation = fixed;
+    }
+    return segmentation;
   }
  
   public void computeDataSkipJunk(float[] data,Statistic[] answer)

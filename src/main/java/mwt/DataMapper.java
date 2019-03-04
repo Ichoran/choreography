@@ -1,5 +1,6 @@
 /* DataMapper.java - Displays a map and movie of where animals went
  * Copyright 2010 Howard Hughes Medical Institute and Rex Kerr
+ * Copyright 2018 Calico Life Sciences and Rex Kerr
  * This file is a part of Choreography and is distributed under the
  * terms of the GNU Lesser General Public Licence version 2.1 (LGPL 2.1).
  * For details, see http://www.gnu.org/licences
@@ -506,7 +507,7 @@ public class DataMapper implements DataMapSource,ActionListener,ChangeListener
   class LinePainter extends DotPainter {
     Graphics2D g2;
     DotPainter backup;
-    Dance.Style recent;
+    Style recent;
     double recent_value;
     int recent_number;
     Ellipse2D dwell;
@@ -542,7 +543,7 @@ public class DataMapper implements DataMapSource,ActionListener,ChangeListener
       if (g2==null) return;
       Vec2D pixeler = new Vec2D();
       float line_length = 0.0f;
-      if (recent.kind==Dance.Styled.Dwell) {
+      if (recent.kind==Style.Styled.Dwell) {
         pixeler.eq( recent.fit.spot.params.x0 , recent.fit.spot.params.y0 );
         pixeler.eqTimes(1000*chore.mm_per_pixel).eqMinus(request.pos).eqTimes(1.0/request.size);
         double radius = Math.sqrt(recent.fit.n*recent.fit.spot.meanVariance()/(recent.fit.n-1)) * DWELL_RADIUS_FACTOR;
@@ -555,7 +556,7 @@ public class DataMapper implements DataMapSource,ActionListener,ChangeListener
         g2.setColor( new Color(cm.colorMap(value)) );
         g2.draw(dwell);
       }
-      else if (recent.kind==Dance.Styled.Straight) {
+      else if (recent.kind==Style.Styled.Straight) {
         int i0 = recent.i0;
         int i1 = recent.i1;
         double c0 = recent.fit.line.lineCoord( dance.centroid[i0].x , dance.centroid[i0].y );
@@ -586,7 +587,7 @@ public class DataMapper implements DataMapSource,ActionListener,ChangeListener
         g2.draw(straight);
         line_length = (float)Math.sqrt((straight.x2-straight.x1)*(straight.x2-straight.x1) + (straight.y2-straight.y1)*(straight.y2-straight.y1));
       }
-      else if (recent.kind==Dance.Styled.Arc) {
+      else if (recent.kind==Style.Styled.Arc) {
         int i0 = recent.i0;
         int i1 = recent.i1;
         double c = recent.fit.circ.arcDeltaCoord( dance.centroid[i0].x , dance.centroid[i0].y , dance.centroid[i1].x , dance.centroid[i1].y );

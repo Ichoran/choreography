@@ -327,7 +327,7 @@ public class MeasureReversal implements CustomComputation {
     public Dance d;
     public Reversal(Dance d0,int i,int j,float[] bias) {
       d = d0;
-      Dance.Style s = d.segmentation[i];
+      Style s = d.segmentation[i];
       i0 = i;
       j0 = j;
       if (s.directions()==0) { backwards = false; traveled = 0.0; }
@@ -338,7 +338,7 @@ public class MeasureReversal implements CustomComputation {
         boolean different = false;
         do {
           i1++;
-          Dance.Style ss = d.segmentation[i1];
+          Style ss = d.segmentation[i1];
           if (backwards && !ss.isLine()) { i1--; different=true; }
           else if (ss.dotWith(s) < -0.33f) { i1--; different=true; }
           else if (backwards != hasBackwards(bias , ss.i0+1 , (ss.endpoints==null || ss.endpoints.length<2) ? ss.i1-1 : ss.endpoints[1]-1)) {

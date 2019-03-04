@@ -1,6 +1,6 @@
 /* Dance.java - Computations on individual moving objects
  * Copyright 2010, 2011 Howard Hughes Medical Institute and Rex Kerr
- * Copyright 2015 Calico Life Sciences LLC (authored by Rex Kerr)
+ * Copyright 2015, 2018 Calico Life Sciences LLC and Rex Kerr
  * This file is a part of Choreography and is distributed under the
  * terms of the GNU Lesser General Public Licence version 2.1 (LGPL 2.1).
  * For details, see http://www.gnu.org/licences
@@ -531,205 +531,7 @@ public class Dance
       }
       return ovl;
     }
-  }
-  
-  public enum Styled { Weird,Dwell,Clutter,Straight,Arc }
-  public static final Styled zeroStyle = Styled.Dwell;
-  public final class Style {
-    public Styled kind;
-    public int dir;
-    public int i0,i1;
-    public Fitter fit;
-    public int[] endpoints = null;
-    public LinkedList<Style> children = null;
-    
-    public Style(Styled s,int i) {
-      kind = s;
-      dir = 0;
-      i0 = i1 = i;
-      fit = null;
-    }
-    public Style(Styled s,int ia,int ib,Fitter f) {
-      kind = s;
-      dir = 0;
-      i0 = ia; i1 = ib;
-      fit = f;
-    }
-    public Style(Styled s,Style old) {
-      kind = s;
-      dir = 0;
-      i0 = old.i0; i1 = old.i1;
-      fit = new Fitter(old.fit);
-    }
-    public Style(LinkedList<Style> adoptables) {
-      if (adoptables==null || adoptables.size()==0) {
-        kind = Styled.Weird;
-        dir = 0;
-        i0 = i1 = -1;
-        fit = null;
-      }
-      else if (adoptables.size()==1) mimic(adoptables.pop());
-      else {
-        mimic( adoptables.peek() );
-        fit = null;
-        children = new LinkedList<Style>();
-        while (!adoptables.isEmpty() && adoptables.peek().kind==kind) {
-          Style s = adoptables.pop();
-          children.add( s );
-          i1 = s.i1;
-        }
-      }
-    }
-    
-    public int size() { return 1+i1-i0; }
-    public void mimic(Style s) {
-      kind = s.kind;
-      dir = s.dir;
-      i0 = s.i0;
-      i1 = s.i1;
-      fit = s.fit;
-      endpoints = s.endpoints;
-      children = s.children;
-    }
-    public int id() {
-      return kind.ordinal() - zeroStyle.ordinal();
-    }
-    public boolean isLine() { return (kind==Styled.Straight || kind==Styled.Arc); }
-    public void fit() {
-      if (fit==null) return;
-      if (kind==Styled.Dwell) fit.spot.fit();
-      else if (kind==Styled.Straight) fit.line.fit();
-      else if (kind==Styled.Arc) fit.circ.fit();
-    }
-    public double sqError( Vec2F v ) {
-      if (fit==null) return Double.NaN;
-      if (kind==Styled.Arc) return fit.circ.sqError(v.x,v.y);
-      if (kind==Styled.Straight) return fit.line.sqError(v.x,v.y);
-      if (kind==Styled.Dwell) return fit.spot.sqError(v.x,v.y);
-      return Double.NaN;
-    }
-    public void addRightSimply( int i ) { i1 = i; fit.addC(centroid[i].x,centroid[i].y); }
-    public void addLeftSimply( int i ) { i0 = i; fit.addC(centroid[i].x,centroid[i].y); }
-    public int addRight( int i ) { addRightSimply(i); i++; while (i<area.length && centroid[i]==null) i++; return i; }
-    public int addLeft( int i ) { addLeftSimply(i); i--; while (i>=0 && centroid[i]==null) i--; return i ; }
-    public void subRight() { fit.subC(centroid[i1].x,centroid[i1].y); i1--; while (i1>=0 && centroid[i1]==null) i1--; }
-    public void subLeft() { fit.subC(centroid[i0].x,centroid[i0].y); i0++; while (i0<area.length && centroid[i0]==null) i0++; }
-    public int shiftRight( int i ) { subLeft(); return addRight(i); }
-    public void deltaVector(Vec2F delta,Vec2F u,Vec2F v) {
-      if (kind==Styled.Straight) {
-        delta.eq(v).eqMinus(u);
-        float l = (float)((fit.line.params.b*delta.y - fit.line.params.a*delta.x)/fit.line.varianceAngleBias());
-        delta.x = -(float)fit.line.params.a * l;
-        delta.y = (float)fit.line.params.b * l;
-      }
-      else if (kind==Styled.Arc) {
-        double x = 2.0*fit.circ.params.y0-(u.y + v.y);
-        double y = u.x+v.x - 2.0*fit.circ.params.x0;
-        delta.eq(v).eqMinus(u);
-        double l = (delta.x*x + delta.y*y)/(x*x + y*y);
-        delta.x = (float)(x*l);
-        delta.y = (float)(y*l);
-      }
-    }
-    public boolean hasDirection() {
-      return (isLine() && (endpoints==null || endpoints.length>1));
-    }
-    public boolean hasSeveralDirections() {
-      return (isLine() && endpoints!=null && endpoints.length>2);
-    }
-    public int directions() {
-      if (!isLine()) return 0;
-      if (endpoints==null) return 1;
-      else if (endpoints.length==0) return 0;
-      else return endpoints.length-1;
-    }
-    public void initialVector(Vec2F direction) {
-      if (endpoints==null || endpoints.length==0) deltaVector(direction,centroid[i0],centroid[i1]);
-      else deltaVector(direction,centroid[endpoints[0]],centroid[endpoints[1]]);
-    }
-    public void finalVector(Vec2F direction) {
-      if (endpoints==null || endpoints.length<2) deltaVector(direction,centroid[i0],centroid[i1]);
-      else deltaVector(direction,centroid[endpoints[endpoints.length-2]],centroid[endpoints[endpoints.length-1]]);
-    }
-    public void pickVector(Vec2F direction,int n) {
-      deltaVector(direction,centroid[endpoints[n]],centroid[endpoints[n+1]]);
-    }
-    public float dotWith(Style s) {
-      Vec2F mydir = new Vec2F();
-      Vec2F theirdir = new Vec2F();
-      if (s.i0 < i0) {
-        s.finalVector(theirdir);
-        initialVector(mydir);
-      }
-      else {
-        s.initialVector(theirdir);
-        finalVector(mydir);
-      }
-      return mydir.unitDot(theirdir);
-    }
-    public void snapToLine(Vec2D stray) {  // Make sure this stays identical to Vec2F version!
-      if (kind==Styled.Arc) {
-        stray.x -= fit.circ.params.x0;
-        stray.y -= fit.circ.params.y0;
-        stray.eqNorm().eqTimes(fit.circ.params.R);
-        stray.x += fit.circ.params.x0;
-        stray.y += fit.circ.params.y0;
-      }
-      else if (kind==Styled.Straight) {
-        double off = fit.line.params.a*stray.y + fit.line.params.b*stray.x + fit.line.params.c;
-        if (off>0) {
-          double shift = -off/(fit.line.params.a*fit.line.params.a + fit.line.params.b*fit.line.params.b);
-          stray.x += shift * fit.line.params.b;
-          stray.y += shift * fit.line.params.a;
-        }
-      }
-    }
-    public void snapToLine(Vec2F stray) {  // Make sure this stays identical to Vec2D version!
-      if (kind==Styled.Arc) {
-        stray.x -= (float)fit.circ.params.x0;
-        stray.y -= (float)fit.circ.params.y0;
-        stray.eqNorm().eqTimes((float)fit.circ.params.R);
-        stray.x += (float)fit.circ.params.x0;
-        stray.y += (float)fit.circ.params.y0;
-      }
-      else if (kind==Styled.Straight) {
-        double off = fit.line.params.a*stray.y + fit.line.params.b*stray.x + fit.line.params.c;
-        if (off>0) {
-          double shift = -off/(fit.line.params.a*fit.line.params.a + fit.line.params.b*fit.line.params.b);
-          stray.x += (float)(shift * fit.line.params.b);
-          stray.y += (float)(shift * fit.line.params.a);
-        }
-      }
-    }
-    public double parameterize(Vec2D v) {
-      if (kind==Styled.Arc) return fit.circ.arcCoord(v.x,v.y);
-      else if (kind==Styled.Straight) return fit.line.parallelCoord(v.x,v.y);
-      else return 0.0;
-    }
-    public double distanceTraversed(int n) {
-      int j0;
-      int j1;
-      if (endpoints==null) {
-        if (n!=0) return 0.0;
-        else { j0=i0; j1=i1; }
-      }
-      else {
-        if (n<0 || n>=endpoints.length-1) return 0.0;
-        else { j0=endpoints[n]; j1=endpoints[n+1]; }
-      }
-      if (kind!=Styled.Arc) return centroid[j1].dist(centroid[j0]);
-      else return Math.abs(fit.circ.params.R * fit.circ.arcDeltaCoord(centroid[j0].x,centroid[j0].y,centroid[j1].x,centroid[j1].y));
-    }
-    public float distanceTraversed() {
-      if (endpoints==null) return (float)distanceTraversed(0);
-      else {
-        double cumulator = 0.0;
-        for (int i=0 ; i<endpoints.length-1 ; i++) cumulator += distanceTraversed(i);
-        return (float)cumulator;
-      }
-    }
-  }
-  
+  }  
   
   public Dance(int identifier, Choreography chore0, ReceptiveField[] attend, ReceptiveField[] shun)
   {
@@ -1346,7 +1148,7 @@ public class Dance
       if (centroid[i]==null) { i++; continue; }
       
       f = new Fitter(shared);
-      s = new Style(Styled.Dwell , i , i-1 , f);
+      s = new Style(centroid, Style.Styled.Dwell , i , i-1 , f);
       while (s.size()<5 && i<area.length) i = s.addRight(i);
       
       double pSpot = f.spot.pFit(jitter*jitter);
@@ -1368,11 +1170,11 @@ public class Dance
       if (s.size()>=5) {
         seg.eq( (moves.peekLast()==null) ? 0 : moves.peekLast().i1+1 , s.i0-1 );
         if (seg.x <= seg.y) findNonNullSegment(seg);
-        if (seg.x <= seg.y) moves.add( new Style(Styled.Weird , seg.x , seg.y , null) );
+        if (seg.x <= seg.y) moves.add( new Style(centroid, Style.Styled.Weird , seg.x , seg.y , null) );
         s.fit();  // Will need spot fit for later stuff!
       }
       else {
-        s.kind = Styled.Weird;
+        s.kind = Style.Styled.Weird;
         s.fit = null;
       }
       moves.add( s );
@@ -1388,19 +1190,19 @@ public class Dance
         last = current;
         current = is.next();
         if (last==null) continue;
-        if (last.kind != Styled.Dwell && current.kind != Styled.Dwell) {
+        if (last.kind != Style.Styled.Dwell && current.kind != Style.Styled.Dwell) {
           last.i1 = current.i1;
           current.i0 = last.i1+1;
           okay = false;
         }
-        else if (last.kind != Styled.Dwell && current.kind == Styled.Dwell) {
+        else if (last.kind != Style.Styled.Dwell && current.kind == Style.Styled.Dwell) {
           while (last.size()>0 && current.fit.spot.sqError(centroid[last.i1].x,centroid[last.i1].y)<credibleDistSq) {
             last.i1 = current.addLeft( last.i1 );
             current.fit.spot.fit();
             okay = false;
           }
         }
-        else if (last.kind == Styled.Dwell && current.kind != Styled.Dwell) {
+        else if (last.kind == Style.Styled.Dwell && current.kind != Style.Styled.Dwell) {
           while (current.size()>0 && last.fit.spot.sqError(centroid[current.i0].x,centroid[current.i0].y)<credibleDistSq) {
             current.i0 = last.addRight( current.i0 );
             last.fit.spot.fit();
@@ -1427,8 +1229,8 @@ public class Dance
         }
         if (current.size()==0) { is.remove(); current=last; }
         else if (last.size()==0) { last.mimic(current); is.remove(); current=last; }
-        else if (current.size()<2 && current.kind==Styled.Dwell) { current.kind = Styled.Weird; }
-        else if (last.size()<2 && last.kind==Styled.Dwell) { last.kind = Styled.Weird; }
+        else if (current.size()<2 && current.kind==Style.Styled.Dwell) { current.kind = Style.Styled.Weird; }
+        else if (last.size()<2 && last.kind==Style.Styled.Dwell) { last.kind = Style.Styled.Weird; }
       }
     }
     
@@ -1436,10 +1238,10 @@ public class Dance
     refined = new LinkedList<Style>();
     while (moves.peek()!=null) {
       s = moves.pop();
-      if (s.kind==Styled.Dwell) refined.addLast( s );
+      if (s.kind==Style.Styled.Dwell) refined.addLast( s );
       else if (s.size() < 3) refined.addLast( s );
       else {
-        ss = new Style(Styled.Straight , s.i0 , s.i0-1 , new Fitter(shared));
+        ss = new Style(centroid, Style.Styled.Straight , s.i0 , s.i0-1 , new Fitter(shared));
         i = s.i0;
         while (ss.size()<5 && i<=s.i1) i = ss.addRight(i);
         ss.fit.line.fit();
@@ -1468,7 +1270,7 @@ public class Dance
           if (s.i0 < ss.i0) {
             seg.eq(s.i0 , ss.i0-1);
             findNonNullSegment(seg);
-            if (seg.x <= seg.y) refined.addLast( new Style(s.kind , seg.x , seg.y , null) );
+            if (seg.x <= seg.y) refined.addLast( new Style(centroid, s.kind , seg.x , seg.y , null) );
           }
           refined.addLast( ss );
           if (i <= s.i1) {
@@ -1482,11 +1284,11 @@ public class Dance
     moves = refined;
     // Switch from straight lines to arcs anywhere it is a much better fit
     for (Style m : moves) {
-      if (m.kind==Styled.Straight && m.size()>4) {
+      if (m.kind==Style.Styled.Straight && m.size()>4) {
         m.fit.circ.fit();
         double pLine = m.fit.line.pFit(jitter*jitter);
         double pCirc = m.fit.circ.pFit(jitter*jitter);
-        if (pCirc > RARE && pCirc*RARE*m.fit.n>pLine) m.kind = Styled.Arc;
+        if (pCirc > RARE && pCirc*RARE*m.fit.n>pLine) m.kind = Style.Styled.Arc;
       }
     }
     // Refine these patches, converting to arcs as necessary
@@ -1506,7 +1308,7 @@ public class Dance
         last = current;
         current = is.next();
         if (last==null) continue;
-        if (last.kind==Styled.Dwell || current.kind==Styled.Dwell) continue;
+        if (last.kind==Style.Styled.Dwell || current.kind==Style.Styled.Dwell) continue;
         if (last.isLine() || current.isLine()) {
           boolean changed = false;
           // Try merging
@@ -1517,11 +1319,11 @@ public class Dance
             nuf.circ.fit();
             double pCirc = nuf.circ.pFit(jitter*jitter);
             if (pCirc > RARE && pCirc*RARE*nuf.n > pLine) {
-              last.kind = Styled.Arc;
+              last.kind = Style.Styled.Arc;
               changed = true;
             }
             else if (pLine > RARE) {
-              last.kind = Styled.Straight;
+              last.kind = Style.Styled.Straight;
               changed = true;
             }
             if (changed) {
@@ -1597,14 +1399,14 @@ public class Dance
             is.remove();
             current = last;
           }
-          else if (last.i1-last.i0 < 2 + ((last.kind==Styled.Arc)?1:0)) last.kind = Styled.Clutter;
-          else if (current.i1-current.i0 < 2 + ((current.kind==Styled.Arc)?1:0)) current.kind = Styled.Clutter;
+          else if (last.i1-last.i0 < 2 + ((last.kind==Style.Styled.Arc)?1:0)) last.kind = Style.Styled.Clutter;
+          else if (current.i1-current.i0 < 2 + ((current.kind==Style.Styled.Arc)?1:0)) current.kind = Style.Styled.Clutter;
         }
       }
     }
     
     // Mark little bits of junk as clutter, and move everything over to the array
-    for (Style m : moves) if (m.size()<3) { m.kind = Styled.Clutter; }
+    for (Style m : moves) if (m.size()<3) { m.kind = Style.Styled.Clutter; }
     segmentation = moves.toArray( new Style[ moves.size() ] );
     Fitter tfit = new Fitter();
     Vec2D dv = new Vec2D();
@@ -1643,10 +1445,10 @@ public class Dance
         // Not significantly different; now we're really worried that it's just enlarged noise.  Is there significant correlation with time?
         if (dotn>=i) {
           tfit.reset();
-          if (m.kind == Styled.Straight) {
+          if (m.kind == Style.Styled.Straight) {
             for (i=m.i0; i<=m.i1; i++) tfit.addL(i-m.i0, m.parameterize(dv.eq(centroid[i])));
             tfit.line.fit();
-            if (Statistic.cdfTstat(tfit.line.tScoreCorrelation(),m.i1-m.i0-1) < 0.95f) m.kind = Styled.Clutter;  // Not a significant time correlation; throw it away
+            if (Statistic.cdfTstat(tfit.line.tScoreCorrelation(),m.i1-m.i0-1) < 0.95f) m.kind = Style.Styled.Clutter;  // Not a significant time correlation; throw it away
           }
           else {
             double[] param = new double[1+m.i1-m.i0];
@@ -1665,7 +1467,7 @@ public class Dance
             else dmax = Math.PI;
             for (i=0;i<pcopy.length;i++) tfit.addL(i-m.i0,(pcopy[i]>dmax) ? pcopy[i]-2.0*Math.PI : pcopy[i]);
             tfit.line.fit();
-            if (Statistic.cdfTstat(tfit.line.tScoreCorrelation(),m.i1-m.i0-1) < 0.95f) m.kind = Styled.Clutter;  // Not a significant time correlation; throw it away
+            if (Statistic.cdfTstat(tfit.line.tScoreCorrelation(),m.i1-m.i0-1) < 0.95f) m.kind = Style.Styled.Clutter;  // Not a significant time correlation; throw it away
           }
         }
       }
@@ -1738,6 +1540,8 @@ public class Dance
       }
       else m.endpoints = new int[0];  // Found nothing, and "null" means straight, so need to pass an empty array here as a marker!
     }
+
+    segmentation = chore.recomputeSegmentation(this, segmentation, credibleDistSq);
   }
   
   public int indexToSegment(int i) {
@@ -1827,7 +1631,9 @@ public class Dance
 
     // Figure out which bits are long enough to get a good reading on and heal gaps on adjacent good bits
     boolean[] ok_array = new boolean[cp_array.length];
-    for (i=0; i<cp_array.length; i++) ok_array[i] = (pathLength(cp_array[i].x,cp_array[i].y) >= min_travel);
+    for (i=0; i<cp_array.length; i++) {
+      ok_array[i] = (pathLength(cp_array[i].x,cp_array[i].y) >= min_travel);
+    }
     for (i=1; i<cp_array.length; i++) {
       if (ok_array[i] && ok_array[i-1]) {
         j = (cp_array[i-1].y + cp_array[i].x)/2;
@@ -1846,7 +1652,7 @@ public class Dance
       s = segmentation[i];
       if (!s.hasDirection()) {
         j++;
-        if (s.kind==Styled.Dwell) for (;h<=s.i1;h++) quantity[h]=0;
+        if (s.kind==Style.Styled.Dwell) for (;h<=s.i1;h++) quantity[h]=0;
         else for (;h<=s.i1;h++) quantity[h]=g;
       }
       else {
@@ -2410,7 +2216,7 @@ public class Dance
         u.eq(centroid[i-1]);
         v.eq(centroid[i]);
         if (seg!=null) {
-          if (seg.kind == Styled.Arc || seg.kind == Styled.Straight) {
+          if (seg.kind == Style.Styled.Arc || seg.kind == Style.Styled.Straight) {
             seg.snapToLine(u); seg.snapToLine(v);
             if (directions.isForward(i)) cud += v.dist(u);
             else cud -= v.dist(u);
@@ -2921,7 +2727,7 @@ public class Dance
     
     for (i=j=0 ; i<segmentation.length ; i=j) {
       Style s = segmentation[i];
-      if (!s.isLine() && s.kind!=Styled.Dwell) { j++; continue; }
+      if (!s.isLine() && s.kind!=Style.Styled.Dwell) { j++; continue; }
       Style ss = s;
       if (s.isLine()) {
         if (s.endpoints!=null && s.endpoints.length>2) {
@@ -2935,8 +2741,8 @@ public class Dance
         ss = segmentation[j];
         if (s.isLine() && ss.isLine() && ss.dotWith(s)<-0.33f) break;
         if (ss.isLine() && ss.endpoints!=null && ss.endpoints.length>2) { internal=true; break; }
-        if (s.isLine() && ss.kind==Styled.Dwell) break;
-        if (s.kind==Styled.Dwell && ss.isLine()) break;
+        if (s.isLine() && ss.kind==Style.Styled.Dwell) break;
+        if (s.kind==Style.Styled.Dwell && ss.isLine()) break;
       }
       if (j<segmentation.length && ! internal) {
         if (hasBackwards(bias , ss.i0 , (ss.endpoints!=null && ss.endpoints.length>1) ? ss.endpoints[1] : ss.i1)) {
